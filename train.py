@@ -1,10 +1,10 @@
 from __future__ import division
 
-from models import *
-from utils.logger import *
-from utils.utils import *
-from utils.datasets import *
-from utils.parse_config import *
+from .models import *
+from .utils.logger import *
+from .utils.utils import *
+from .utils.datasets import *
+from .utils.parse_config import *
 from test import evaluate
 
 from terminaltables import AsciiTable
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     opt = parser.parse_args()
     print(opt)
 
-    logger = Logger("logs")
+    #logger = Logger("logs")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -133,7 +133,7 @@ if __name__ == "__main__":
                         if name != "grid_size":
                             tensorboard_log += [(f"{name}_{j+1}", metric)]
                 tensorboard_log += [("loss", loss.item())]
-                logger.list_of_scalars_summary(tensorboard_log, batches_done)
+                #logger.list_of_scalars_summary(tensorboard_log, batches_done)
 
             log_str += AsciiTable(metric_table).table
             log_str += f"\nTotal loss {loss.item()}"

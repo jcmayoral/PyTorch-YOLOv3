@@ -1,0 +1,4 @@
+classes=2
+train=yolov3/data/custom/josebinarytrain.txt
+valid=yolov3/data/custom/josebinaryvalid.txt
+names=yolov3/data/josebinary.names

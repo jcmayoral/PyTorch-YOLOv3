@@ -6,8 +6,9 @@ import numpy as np
 from PIL import Image
 import torch
 import torch.nn.functional as F
+import random
 
-from utils.augmentations import horisontal_flip
+from .augmentations import horisontal_flip
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
@@ -61,6 +62,8 @@ class ListDataset(Dataset):
         with open(list_path, "r") as file:
             self.img_files = file.readlines()
 
+        random.shuffle(self.img_files)
+
         self.label_files = [
             path.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
             for path in self.img_files
@@ -79,6 +82,7 @@ class ListDataset(Dataset):
         # ---------
         #  Image
         # ---------
+        #print("index:{} of {}".format(index, len(self.img_files)))
 
         img_path = self.img_files[index % len(self.img_files)].rstrip()
 
@@ -132,12 +136,14 @@ class ListDataset(Dataset):
         return img_path, img, targets
 
     def collate_fn(self, batch):
+        #print ("colatein")
         paths, imgs, targets = list(zip(*batch))
         # Remove empty placeholder targets
         targets = [boxes for boxes in targets if boxes is not None]
         # Add sample index to targets
         for i, boxes in enumerate(targets):
             boxes[:, 0] = i
+        #print (targets, "HERE", paths)
         targets = torch.cat(targets, 0)
         # Selects new image size every tenth batch
         if self.multiscale and self.batch_count % 10 == 0:
@@ -145,7 +151,78 @@ class ListDataset(Dataset):
         # Resize images to input shape
         imgs = torch.stack([resize(img, self.img_size) for img in imgs])
         self.batch_count += 1
+        #print ("colateout")
         return paths, imgs, targets
 
     def __len__(self):
         return len(self.img_files)
+
+
+
+class MyListDataset(ListDataset):
+    def __init__(self, list_path, img_size=416, augment=True, multiscale=True, normalized_labels=True):
+        ListDataset.__init__(self, list_path, img_size, augment, multiscale, normalized_labels)
+
+    def __getitem__(self, index):
+
+        # ---------
+        #  Image
+        # ---------
+        #print("index:{} of {}".format(index, len(self.img_files)))
+
+        img_path = self.img_files[index % len(self.img_files)].rstrip()
+        depth_path = img_path.replace("jpg", "npy")
+
+        # Extract image as PyTorch tensor
+        rgb_img = transforms.ToTensor()(Image.open(img_path).convert('RGB'))
+        depth_img = torch.from_numpy(np.load(depth_path))
+
+
+        # Handle images with less than three channels
+        if len(img.shape) != 3:
+            img = img.unsqueeze(0)
+            img = img.expand((3, img.shape[1:]))
+
+        img = torch.hstack((rgb_img, depth_img))
+        print ("SHAPE of hstack tensor image ", img.shape)
+
+        _, h, w = img.shape
+        h_factor, w_factor = (h, w) if self.normalized_labels else (1, 1)
+        # Pad to square resolution
+        img, pad = pad_to_square(img, 0)
+        _, padded_h, padded_w = img.shape
+
+        # ---------
+        #  Label
+        # ---------
+
+        label_path = self.label_files[index % len(self.img_files)].rstrip()
+
+        targets = None
+        if os.path.exists(label_path):
+            boxes = torch.from_numpy(np.loadtxt(label_path).reshape(-1, 5))
+            # Extract coordinates for unpadded + unscaled image
+            x1 = w_factor * (boxes[:, 1] - boxes[:, 3] / 2)
+            y1 = h_factor * (boxes[:, 2] - boxes[:, 4] / 2)
+            x2 = w_factor * (boxes[:, 1] + boxes[:, 3] / 2)
+            y2 = h_factor * (boxes[:, 2] + boxes[:, 4] / 2)
+            # Adjust for added padding
+            x1 += pad[0]
+            y1 += pad[2]
+            x2 += pad[1]
+            y2 += pad[3]
+            # Returns (x, y, w, h)
+            boxes[:, 1] = ((x1 + x2) / 2) / padded_w
+            boxes[:, 2] = ((y1 + y2) / 2) / padded_h
+            boxes[:, 3] *= w_factor / padded_w
+            boxes[:, 4] *= h_factor / padded_h
+
+            targets = torch.zeros((len(boxes), 6))
+            targets[:, 1:] = boxes
+
+        # Apply augmentations
+        if self.augment:
+            if np.random.random() < 0.5:
+                img, targets = horisontal_flip(img, targets)
+
+        return img_path, img, targets

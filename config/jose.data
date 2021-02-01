@@ -1,0 +1,4 @@
+classes=4
+train=yolov3/data/custom/josetrain.txt
+valid=yolov3/data/custom/josevalid.txt
+names=yolov3/data/jose.names

@@ -6,8 +6,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 
-from utils.parse_config import *
-from utils.utils import build_targets, to_cpu, non_max_suppression
+from .utils.parse_config import *
+from .utils.utils import build_targets, to_cpu, non_max_suppression
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -114,6 +114,7 @@ class YOLOLayer(nn.Module):
         self.ignore_thres = 0.5
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
+        #self.bce_loss = nn.BCEWithLogitsLoss()
         self.obj_scale = 1
         self.noobj_scale = 100
         self.metrics = {}
@@ -242,6 +243,7 @@ class Darknet(nn.Module):
         self.img_size = img_size
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen, 0], dtype=np.int32)
+        #self.out_channels = 21
 
     def forward(self, x, targets=None):
         img_dim = x.shape[2]

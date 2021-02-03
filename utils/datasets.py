@@ -166,9 +166,16 @@ class MyListDataset(ListDataset):
         tmp_files = list()
 
         for f in self.img_files:
-            pf = f.replace("jpg", "npy")
-            if os.path.exists(f) and os.path.exists(pf):
+            pf = f.rstrip().replace("jpg", "npy")
+            pf = pf.replace("image", "depthimage")
+            #print(f.rstrip())
+            #print(pf.rstrip())
+
+            if os.path.exists(f.rstrip()) and os.path.exists(pf.rstrip()):
                 tmp_files.append(f)
+                
+        print (len(tmp_files))
+        print (len(self.img_files))
         
         
         self.img_files = copy.deepcopy(tmp_files)

@@ -157,11 +157,28 @@ class ListDataset(Dataset):
     def __len__(self):
         return len(self.img_files)
 
-
+import copy 
 
 class MyListDataset(ListDataset):
     def __init__(self, list_path, img_size=416, augment=True, multiscale=True, normalized_labels=True):
         ListDataset.__init__(self, list_path, img_size, augment, multiscale, normalized_labels)
+        
+        tmp_files = list()
+
+        for f in self.img_files:
+            pf = f.replace("jpg", "npy")
+            if os.path.exists(f) and os.path.exists(pf):
+                tmp_files.append(f)
+        
+        
+        self.img_files = copy.deepcopy(tmp_files)
+         
+                
+        self.label_files = [
+            path.replace("images", "labels").replace(".png", ".txt").replace(".jpg", ".txt")
+            for path in self.img_files
+        ]
+        
 
     def __getitem__(self, index):
 
@@ -172,19 +189,33 @@ class MyListDataset(ListDataset):
 
         img_path = self.img_files[index % len(self.img_files)].rstrip()
         depth_path = img_path.replace("jpg", "npy")
+        depth_path = depth_path.replace("image", "depthimage")
 
         # Extract image as PyTorch tensor
         rgb_img = transforms.ToTensor()(Image.open(img_path).convert('RGB'))
-        depth_img = torch.from_numpy(np.load(depth_path))
+        #depth_np = np.linalg.norm(depth_np)
+        depth_img = torch.from_numpy(np.load(depth_path)/255)
+        #print("antes:: ", torch.max(rgb_img))        
+        #transforms.Normalize((1.0),(0.1), inplace=True)(depth_img)
+        #print("antes {}:: ".format(torch.max(rgb_img)))
+        #print("despues {} :: ".format(torch.max(depth_img)))
+        #print("despues {} :: ".format(np.unique(depth_np/255)))
 
 
         # Handle images with less than three channels
-        if len(img.shape) != 3:
-            img = img.unsqueeze(0)
-            img = img.expand((3, img.shape[1:]))
+        if len(rgb_img.shape) != 3:
+            rgb_img = rgb_img.unsqueeze(0)
+            rgb_img = rgb_img.expand((3, rgb_img.shape[1:]))
 
-        img = torch.hstack((rgb_img, depth_img))
-        print ("SHAPE of hstack tensor image ", img.shape)
+        #img = torch.hstack((rgb_img, depth_img))
+        #print (rgb_img.shape, depth_img.shape)
+        #depth_img = torch.transpose(depth_img, 0, 1)
+        #print ("Transpose " , rgb_img.shape, depth_img.shape)
+
+        depth_img = depth_img.unsqueeze(0) 
+        #rint ("Unsqueeze " , rgb_img.shape, depth_img.shape)
+        img = torch.cat([rgb_img, depth_img], dim=0)
+        #rint ("SHAPE of hstack tensor image ", img.shape)
 
         _, h, w = img.shape
         h_factor, w_factor = (h, w) if self.normalized_labels else (1, 1)

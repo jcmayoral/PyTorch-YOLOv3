@@ -1,5 +1,5 @@
 classes=4
-train=/media/datasets/simanimation/depth_testdataset_v3/augmented_files_train.txt
-valid=/media/datasets/simanimation/depth_testdataset_v3/augmented_files_valid.txt
+train=/home/jose/datasets/simanimation_white/v4/augmented_files_train.txt
+valid=/home/jose/datasets/simanimation_white/v4/augmented_files_valid.txt
 names=/home/jose/ros_ws/src/gr_perception/gr_tools/label_tools/classes.names
-backup=/home/jose/media/datasets/weights/augmented_simanimation
+backup=/home/jose/datasets/weights/augmented_simanimation

@@ -105,6 +105,7 @@ class ListDataset(Dataset):
         # ---------
 
         label_path = self.label_files[index % len(self.img_files)].rstrip()
+        #print ("IMG {} with LABEL {}".format(img_path, label_path))
 
         targets = None
         if os.path.exists(label_path):

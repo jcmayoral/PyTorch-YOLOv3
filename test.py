@@ -36,6 +36,7 @@ def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size
     #print (len(dataloader))
     #print(path)
     for batch_i, (_, imgs, targets) in enumerate(tqdm.tqdm(dataloader, desc="Detecting objects")):
+        mytargets = targets.to("cuda")
 
         # Extract labels
         labels += targets[:, 1].tolist()
@@ -45,9 +46,12 @@ def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size
 
         imgs = Variable(imgs.type(Tensor), requires_grad=False)
 
+        eval_loss = []
+
         with torch.no_grad():
-            outputs = model(imgs)
+            loss, outputs = model(imgs, mytargets)
             outputs = non_max_suppression(outputs, conf_thres=conf_thres, nms_thres=nms_thres)
+        eval_loss.append(loss.item()) 
         sample_metrics += get_batch_statistics(outputs, targets, iou_threshold=iou_thres)
 
     # Concatenate sample statistics
@@ -56,7 +60,7 @@ def evaluate(model, path, iou_thres, conf_thres, nms_thres, img_size, batch_size
     true_positives, pred_scores, pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
     precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_scores, pred_labels, labels)
 
-    return precision, recall, AP, f1, ap_class
+    return precision, recall, AP, f1, ap_class, sum(eval_loss)/len(eval_loss)
 
 
 
